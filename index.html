@@ -111,188 +111,6 @@
             padding: 40px 30px;
         }
 
-        /* Audio Player Styles */
-        .audio-player {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            color: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            animation: glow 2s ease-in-out infinite;
-        }
-
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-            50% { box-shadow: 0 10px 35px rgba(245, 87, 108, 0.6); }
-        }
-
-        .song-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .song-icon {
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            animation: spin 4s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .song-details {
-            flex: 1;
-        }
-
-        .song-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .song-artist {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .progress-container {
-            margin-bottom: 15px;
-        }
-
-        .progress-bar-audio {
-            height: 5px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 5px;
-            cursor: pointer;
-            position: relative;
-            margin-bottom: 5px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: white;
-            border-radius: 5px;
-            width: 0%;
-            position: relative;
-            transition: width 0.1s linear;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            right: -5px;
-            top: -4px;
-            width: 13px;
-            height: 13px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 10px rgba(255,255,255,0.8);
-        }
-
-        .time-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-        }
-
-        .audio-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .control-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 18px;
-        }
-
-        .control-btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: scale(1.1);
-        }
-
-        .control-btn.play-pause {
-            width: 60px;
-            height: 60px;
-            font-size: 24px;
-            background: white;
-            color: #f5576c;
-        }
-
-        .control-btn.play-pause:hover {
-            transform: scale(1.15);
-            box-shadow: 0 0 20px rgba(255,255,255,0.5);
-        }
-
-        .resume-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid white;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .resume-btn:hover {
-            background: white;
-            color: #f5576c;
-            transform: translateY(-2px);
-        }
-
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-left: auto;
-        }
-
-        .volume-slider {
-            width: 80px;
-            height: 5px;
-            -webkit-appearance: none;
-            background: rgba(255,255,255,0.3);
-            border-radius: 5px;
-            outline: none;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 15px;
-            height: 15px;
-            background: white;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
         .feature-badges {
             display: flex;
             justify-content: center;
@@ -545,52 +363,6 @@
                 <p>Download photos and documents from Telegram messages instantly</p>
             </div>
             <div class="card-body">
-                <!-- Audio Player Section -->
-                <div class="audio-player">
-                    <div class="song-info">
-                        <div class="song-icon">
-                            <i class="fas fa-music"></i>
-                        </div>
-                        <div class="song-details">
-                            <div class="song-title">Pal Pal Dil Ke Paas</div>
-                            <div class="song-artist">Kishore Kumar • 1973</div>
-                        </div>
-                    </div>
-                    
-                    <div class="progress-container">
-                        <div class="progress-bar-audio" id="progressBarAudio" onclick="seekAudio(event)">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                        <div class="time-info">
-                            <span id="currentTime">0:00</span>
-                            <span id="duration">3:45</span>
-                        </div>
-                    </div>
-                    
-                    <div class="audio-controls">
-                        <button class="control-btn" onclick="prevSong()">
-                            <i class="fas fa-backward"></i>
-                        </button>
-                        <button class="control-btn play-pause" id="playPauseBtn" onclick="togglePlayPause()">
-                            <i class="fas fa-play" id="playPauseIcon"></i>
-                        </button>
-                        <button class="control-btn" onclick="nextSong()">
-                            <i class="fas fa-forward"></i>
-                        </button>
-                        <div class="volume-control">
-                            <i class="fas fa-volume-up"></i>
-                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="0.7" onchange="changeVolume(this.value)">
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: center;">
-                        <button class="resume-btn" onclick="resumeSong()">
-                            <i class="fas fa-play-circle"></i>
-                            Resume Song
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Feature Badges -->
                 <div class="feature-badges">
                     <span class="badge"><i class="fas fa-image"></i> Photos</span>
@@ -704,91 +476,7 @@
         </div>
     </div>
 
-    <!-- Audio Element (hidden) -->
-    <audio id="bgMusic" loop>
-        <source src="{{ url_for('static', filename='audio/pal_pal.mp3') }}" type="audio/mpeg">
-        Your browser does not support the audio element.
-    </audio>
-
     <script>
-        // ==================== AUDIO PLAYER CONTROLS ====================
-        const audio = document.getElementById('bgMusic');
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const playPauseIcon = document.getElementById('playPauseIcon');
-        const progressFill = document.getElementById('progressFill');
-        const currentTimeSpan = document.getElementById('currentTime');
-        const durationSpan = document.getElementById('duration');
-        const volumeSlider = document.getElementById('volumeSlider');
-        
-        // Set duration when metadata loaded
-        audio.addEventListener('loadedmetadata', function() {
-            durationSpan.textContent = formatTime(audio.duration);
-        });
-        
-        // Update progress bar
-        audio.addEventListener('timeupdate', function() {
-            const percent = (audio.currentTime / audio.duration) * 100;
-            progressFill.style.width = percent + '%';
-            currentTimeSpan.textContent = formatTime(audio.currentTime);
-        });
-        
-        // Auto-play when page loads
-        window.addEventListener('load', function() {
-            audio.volume = 0.7;
-            audio.play().catch(e => console.log('Auto-play prevented:', e));
-        });
-        
-        // Format time in MM:SS
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return mins + ':' + (secs < 10 ? '0' : '') + secs;
-        }
-        
-        // Toggle play/pause
-        function togglePlayPause() {
-            if (audio.paused) {
-                audio.play();
-                playPauseIcon.className = 'fas fa-pause';
-            } else {
-                audio.pause();
-                playPauseIcon.className = 'fas fa-play';
-            }
-        }
-        
-        // Resume song (starts from beginning if paused, continues if playing)
-        function resumeSong() {
-            audio.currentTime = 0;
-            audio.play();
-            playPauseIcon.className = 'fas fa-pause';
-            showStatus('🎵 Pal Pal Dil Ke Paas - Playing from start', 'info');
-        }
-        
-        // Seek in audio
-        function seekAudio(event) {
-            const progressBar = document.getElementById('progressBarAudio');
-            const rect = progressBar.getBoundingClientRect();
-            const pos = (event.clientX - rect.left) / rect.width;
-            audio.currentTime = pos * audio.duration;
-        }
-        
-        // Change volume
-        function changeVolume(value) {
-            audio.volume = value;
-        }
-        
-        // Previous song (demo - restarts current)
-        function prevSong() {
-            audio.currentTime = 0;
-            showStatus('⏮️ Restarting song', 'info');
-        }
-        
-        // Next song (demo - restarts current)
-        function nextSong() {
-            audio.currentTime = 0;
-            showStatus('⏭️ Restarting song', 'info');
-        }
-        
         // ==================== DOWNLOADER CONTROLS ====================
         let currentDownloadId = null;
         let statusInterval = null;
@@ -1052,4 +740,50 @@
                 const response = await fetch('/logout');
                 const data = await response.json();
                 
-                if (data.success) 
+                if (data.success) {
+                    showStatus('✓ Logged out successfully', 'success');
+                    
+                    document.getElementById('loginSection').style.display = 'block';
+                    document.getElementById('verifySection').style.display = 'none';
+                    document.getElementById('downloadSection').style.display = 'none';
+                    document.getElementById('logoutSection').style.display = 'none';
+                    
+                    document.getElementById('phone').value = '+';
+                    document.getElementById('code').value = '';
+                    document.getElementById('messageLink').value = '';
+                    
+                    if (statusInterval) {
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                    
+                    showProgress(false);
+                    currentDownloadId = null;
+                    currentPhone = '';
+                }
+            } catch (error) {
+                showStatus('Logout error: ' + error.message, 'danger');
+            }
+        }
+
+        // Handle Enter key presses
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendCode();
+            }
+        });
+
+        document.getElementById('code').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyCode();
+            }
+        });
+
+        document.getElementById('messageLink').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startDownload();
+            }
+        });
+    </script>
+</body>
+    </html> 
