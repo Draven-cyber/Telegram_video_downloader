@@ -3,139 +3,441 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Media Downloader</title>
+    <title>Evo Tg Downloader - Telegram Media Downloader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
         }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff" fill-opacity="0.05" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            background-size: cover;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
         .main-container {
             max-width: 600px;
             margin: 50px auto;
+            animation: slideUp 0.5s ease-out;
+            position: relative;
+            z-index: 1;
         }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .card {
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
         }
+
         .card-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border-radius: 15px 15px 0 0 !important;
-            padding: 20px;
+            border-radius: 20px 20px 0 0 !important;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
+
+        .card-header::before {
+            content: '⚡';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 120px;
+            opacity: 0.1;
+            transform: rotate(15deg);
+        }
+
         .card-header h2 {
             margin: 0;
-            font-size: 24px;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
+
+        .card-header h2 i {
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .card-header p {
+            margin: 10px 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
         .card-body {
-            padding: 30px;
+            padding: 40px 30px;
         }
+
+        .feature-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(102,126,234,0.3);
+        }
+
+        .badge i {
+            margin-right: 5px;
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 12px 30px;
+            padding: 14px 30px;
             font-size: 16px;
             font-weight: 600;
-            border-radius: 25px;
-            transition: transform 0.2s;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
         .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102,126,234,0.5);
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-outline-danger {
+            border-radius: 30px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-danger:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+            box-shadow: 0 5px 15px rgba(220,53,69,0.3);
         }
-        .form-control {
-            border-radius: 25px;
-            padding: 12px 20px;
+
+        .form-control, .input-group-text {
+            border-radius: 30px;
+            padding: 14px 20px;
             border: 2px solid #e0e0e0;
-            transition: border-color 0.2s;
+            transition: all 0.3s ease;
+            font-size: 15px;
         }
+
         .form-control:focus {
             border-color: #667eea;
-            box-shadow: none;
+            box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.1);
         }
+
+        .input-group-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
         .alert {
-            border-radius: 25px;
-            padding: 15px 20px;
+            border-radius: 30px;
+            padding: 15px 25px;
             margin-top: 20px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
         }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .progress {
-            height: 25px;
-            border-radius: 25px;
+            height: 30px;
+            border-radius: 30px;
             margin-top: 20px;
+            background-color: #f0f0f0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
+
         .progress-bar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 25px;
+            border-radius: 30px;
             transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
-        .login-section {
-            margin-bottom: 30px;
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 1.5s infinite;
         }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .login-section, .verify-section, .download-section {
+            transition: all 0.3s ease;
+        }
+
         .download-link-example {
-            font-size: 12px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            font-size: 13px;
             color: #666;
-            margin-top: 5px;
+            margin-top: 10px;
+            border-left: 4px solid #667eea;
         }
+
+        .download-link-example i {
+            color: #667eea;
+            margin-right: 5px;
+        }
+
         .status-icon {
             font-size: 48px;
             margin-bottom: 15px;
+            animation: bounce 2s infinite;
         }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         .download-complete {
             text-align: center;
+            padding: 20px;
         }
+
         .download-complete a {
             color: #667eea;
             text-decoration: none;
             font-weight: 600;
+            font-size: 18px;
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.3s ease;
         }
+
         .download-complete a:hover {
-            text-decoration: underline;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102,126,234,0.4);
+            text-decoration: none;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: white;
+            font-size: 14px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer i {
+            color: #ff6b6b;
+            animation: heartbeat 1.5s ease infinite;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .footer .heart {
+            display: inline-block;
+            margin: 0 5px;
+        }
+
+        .footer .name {
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #667eea;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="card">
-            <div class="card-header text-center">
-                <h2>📥 Telegram Media Downloader</h2>
-                <p class="mb-0">Download photos and documents from Telegram messages</p>
+            <div class="card-header">
+                <h2>
+                    <i class="fas fa-bolt"></i>
+                    Evo Tg Downloader
+                </h2>
+                <p>Download photos and documents from Telegram messages instantly</p>
             </div>
             <div class="card-body">
+                <!-- Feature Badges -->
+                <div class="feature-badges">
+                    <span class="badge"><i class="fas fa-image"></i> Photos</span>
+                    <span class="badge"><i class="fas fa-file-pdf"></i> Documents</span>
+                    <span class="badge"><i class="fas fa-video"></i> Videos</span>
+                    <span class="badge"><i class="fas fa-music"></i> Audio</span>
+                </div>
+
                 <!-- Login Section -->
                 <div id="loginSection" class="login-section">
-                    <div class="mb-3">
-                        <label for="phone" class="form-label">Phone Number (with country code)</label>
-                        <input type="text" class="form-control" id="phone" placeholder="e.g., +1234567890">
+                    <div class="mb-4">
+                        <label for="phone" class="form-label fw-bold">
+                            <i class="fas fa-phone-alt me-2"></i>Phone Number
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                            <input type="text" class="form-control" id="phone" placeholder="+1234567890" value="+">
+                        </div>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Enter your phone number with country code (e.g., +1 for US, +44 for UK)
+                        </div>
                     </div>
-                    <button class="btn btn-primary w-100" onclick="sendCode()">Send Login Code</button>
+                    <button class="btn btn-primary w-100" onclick="sendCode()" id="sendCodeBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Send Login Code
+                    </button>
                 </div>
 
                 <!-- Verification Section (hidden initially) -->
-                <div id="verifySection" style="display: none;">
-                    <div class="mb-3">
-                        <label for="code" class="form-label">Verification Code</label>
-                        <input type="text" class="form-control" id="code" placeholder="Enter the code you received">
+                <div id="verifySection" class="verify-section" style="display: none;">
+                    <div class="mb-4">
+                        <label for="code" class="form-label fw-bold">
+                            <i class="fas fa-key me-2"></i>Verification Code
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="text" class="form-control" id="code" placeholder="Enter 5-digit code">
+                        </div>
+                        <div class="form-text mt-2">
+                            <i class="fas fa-clock me-1"></i>
+                            Code expires in 5 minutes
+                        </div>
                     </div>
-                    <button class="btn btn-primary w-100" onclick="verifyCode()">Verify & Login</button>
+                    <button class="btn btn-primary w-100" onclick="verifyCode()" id="verifyBtn">
+                        <i class="fas fa-check-circle me-2"></i>Verify & Login
+                    </button>
+                    <div class="text-center mt-3">
+                        <a href="#" onclick="resetLogin()" class="text-decoration-none" style="color: #667eea;">
+                            <i class="fas fa-arrow-left me-1"></i>Back to login
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Download Section (hidden until logged in) -->
-                <div id="downloadSection" style="display: none;">
-                    <div class="mb-3">
-                        <label for="messageLink" class="form-label">Telegram Message Link</label>
-                        <input type="text" class="form-control" id="messageLink" 
-                               placeholder="https://t.me/username/123 or https://t.me/c/123456789/123">
+                <div id="downloadSection" class="download-section" style="display: none;">
+                    <div class="mb-4">
+                        <label for="messageLink" class="form-label fw-bold">
+                            <i class="fas fa-link me-2"></i>Telegram Message Link
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fab fa-telegram"></i></span>
+                            <input type="text" class="form-control" id="messageLink" 
+                                   placeholder="https://t.me/...">
+                        </div>
                         <div class="download-link-example">
-                            Examples:<br>
-                            • Public channel: https://t.me/username/123<br>
-                            • Private channel: https://t.me/c/123456789/123
+                            <i class="fas fa-lightbulb"></i>
+                            <strong>Examples:</strong><br>
+                            • Public channel: <code>https://t.me/username/123</code><br>
+                            • Private channel: <code>https://t.me/c/123456789/123</code><br>
+                            • Post with media: <code>https://t.me/telegram/10</code>
                         </div>
                     </div>
-                    <button class="btn btn-primary w-100" onclick="startDownload()">Download Media</button>
+                    <button class="btn btn-primary w-100" onclick="startDownload()" id="downloadBtn">
+                        <i class="fas fa-download me-2"></i>Download Media
+                    </button>
                 </div>
 
                 <!-- Status Messages -->
@@ -146,26 +448,56 @@
                     <div class="progress">
                         <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
                     </div>
-                    <p id="progressText" class="text-center mt-2">Processing...</p>
+                    <p id="progressText" class="text-center mt-3 mb-0 fw-bold">Processing...</p>
                 </div>
 
                 <!-- Logout Button -->
-                <div id="logoutSection" style="display: none; text-align: center; margin-top: 20px;">
-                    <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+                <div id="logoutSection" style="display: none; text-align: center; margin-top: 30px;">
+                    <button class="btn btn-outline-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </button>
                 </div>
             </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="mb-0">
+                <i class="fas fa-bolt me-1"></i>
+                Evo Tg Downloader 
+                <span class="heart">❤️</span> 
+                made by <span class="name">Rithika</span>
+                <i class="fas fa-heart ms-1"></i>
+            </p>
+            <p class="mt-2 mb-0" style="font-size: 12px; opacity: 0.8;">
+                <i class="far fa-copyright me-1"></i>
+                2024 All rights reserved
+            </p>
         </div>
     </div>
 
     <script>
         let currentDownloadId = null;
         let statusInterval = null;
+        let currentPhone = '';
+
+        // Check authentication status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
 
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('statusMessage');
-            statusDiv.textContent = message;
+            statusDiv.innerHTML = message;
             statusDiv.className = `alert alert-${type}`;
             statusDiv.style.display = 'block';
+            
+            // Auto hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
         }
 
         function hideStatus() {
@@ -181,15 +513,65 @@
             document.getElementById('progressText').textContent = text;
         }
 
+        function setButtonLoading(buttonId, isLoading) {
+            const btn = document.getElementById(buttonId);
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loader"></span>Processing...';
+            } else {
+                btn.disabled = false;
+                if (buttonId === 'sendCodeBtn') {
+                    btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Login Code';
+                } else if (buttonId === 'verifyBtn') {
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Verify & Login';
+                } else if (buttonId === 'downloadBtn') {
+                    btn.innerHTML = '<i class="fas fa-download me-2"></i>Download Media';
+                }
+            }
+        }
+
+        function resetLogin() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('verifySection').style.display = 'none';
+            document.getElementById('code').value = '';
+            hideStatus();
+        }
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/check-auth');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('verifySection').style.display = 'none';
+                    document.getElementById('downloadSection').style.display = 'block';
+                    document.getElementById('logoutSection').style.display = 'block';
+                    showStatus('✓ Already logged in!', 'success');
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+            }
+        }
+
         async function sendCode() {
-            const phone = document.getElementById('phone').value;
-            if (!phone) {
+            const phone = document.getElementById('phone').value.trim();
+            if (!phone || phone === '+') {
                 showStatus('Please enter your phone number', 'warning');
                 return;
             }
 
+            // Basic phone number validation
+            if (phone.length < 8) {
+                showStatus('Please enter a valid phone number with country code', 'warning');
+                return;
+            }
+
+            setButtonLoading('sendCodeBtn', true);
+            currentPhone = phone;
+
             try {
-                showStatus('Sending code...', 'info');
+                showStatus('Sending verification code...', 'info');
                 
                 const response = await fetch('/login', {
                     method: 'POST',
@@ -200,31 +582,32 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    if (data.already_logged_in) {
-                        showStatus('Already logged in!', 'success');
-                        document.getElementById('loginSection').style.display = 'none';
-                        document.getElementById('verifySection').style.display = 'none';
-                        document.getElementById('downloadSection').style.display = 'block';
-                        document.getElementById('logoutSection').style.display = 'block';
-                    } else {
-                        showStatus('Code sent! Please check your Telegram.', 'success');
-                        document.getElementById('loginSection').style.display = 'none';
-                        document.getElementById('verifySection').style.display = 'block';
-                    }
+                    showStatus('✓ Code sent! Check your Telegram app', 'success');
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('verifySection').style.display = 'block';
                 } else {
                     showStatus(data.error || 'Failed to send code', 'danger');
                 }
             } catch (error) {
                 showStatus('Error: ' + error.message, 'danger');
+            } finally {
+                setButtonLoading('sendCodeBtn', false);
             }
         }
 
         async function verifyCode() {
-            const code = document.getElementById('code').value;
+            const code = document.getElementById('code').value.trim();
             if (!code) {
                 showStatus('Please enter the verification code', 'warning');
                 return;
             }
+
+            if (code.length < 4) {
+                showStatus('Please enter a valid verification code', 'warning');
+                return;
+            }
+
+            setButtonLoading('verifyBtn', true);
 
             try {
                 showStatus('Verifying...', 'info');
@@ -232,13 +615,16 @@
                 const response = await fetch('/verify', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({code: code})
+                    body: JSON.stringify({
+                        code: code,
+                        phone: currentPhone
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showStatus('Login successful!', 'success');
+                    showStatus('✓ Login successful!', 'success');
                     document.getElementById('verifySection').style.display = 'none';
                     document.getElementById('downloadSection').style.display = 'block';
                     document.getElementById('logoutSection').style.display = 'block';
@@ -247,21 +633,31 @@
                 }
             } catch (error) {
                 showStatus('Error: ' + error.message, 'danger');
+            } finally {
+                setButtonLoading('verifyBtn', false);
             }
         }
 
         async function startDownload() {
-            const link = document.getElementById('messageLink').value;
+            const link = document.getElementById('messageLink').value.trim();
             if (!link) {
                 showStatus('Please enter a message link', 'warning');
                 return;
             }
 
+            // Validate Telegram link
+            if (!link.includes('t.me/')) {
+                showStatus('Please enter a valid Telegram link', 'warning');
+                return;
+            }
+
+            setButtonLoading('downloadBtn', true);
+
             try {
                 showStatus('Starting download...', 'info');
                 hideStatus();
                 showProgress(true);
-                updateProgress(10, 'Initializing...');
+                updateProgress(5, 'Initializing...');
 
                 const response = await fetch('/download', {
                     method: 'POST',
@@ -273,7 +669,7 @@
                 
                 if (data.success) {
                     currentDownloadId = data.download_id;
-                    showStatus('Download started!', 'success');
+                    showStatus('✓ Download started!', 'success');
                     
                     // Start checking status
                     if (statusInterval) clearInterval(statusInterval);
@@ -285,6 +681,8 @@
             } catch (error) {
                 showProgress(false);
                 showStatus('Error: ' + error.message, 'danger');
+            } finally {
+                setButtonLoading('downloadBtn', false);
             }
         }
 
@@ -299,9 +697,18 @@
                     clearInterval(statusInterval);
                     showProgress(false);
                     
-                    // Show download link
-                    const downloadLink = `<a href="${data.download_url}" target="_blank">Click here to download ${data.filename}</a>`;
-                    document.getElementById('statusMessage').innerHTML = downloadLink;
+                    // Show download link with file info
+                    const downloadHtml = `
+                        <div class="download-complete">
+                            <i class="fas fa-check-circle text-success status-icon"></i>
+                            <h5 class="mb-3">Download Complete!</h5>
+                            <p class="mb-3">File: ${data.filename}</p>
+                            <a href="${data.download_url}" target="_blank" class="btn btn-success">
+                                <i class="fas fa-download me-2"></i>Click to Download
+                            </a>
+                        </div>
+                    `;
+                    document.getElementById('statusMessage').innerHTML = downloadHtml;
                     document.getElementById('statusMessage').className = 'alert alert-success';
                     document.getElementById('statusMessage').style.display = 'block';
                     
@@ -310,20 +717,20 @@
                 } else if (data.status === 'error') {
                     clearInterval(statusInterval);
                     showProgress(false);
-                    showStatus('Error: ' + data.message, 'danger');
+                    showStatus('❌ Error: ' + data.message, 'danger');
                     currentDownloadId = null;
                     
                 } else if (data.status === 'processing') {
-                    updateProgress(30, 'Processing message...');
+                    updateProgress(30, '🔍 Processing message...');
                     
                 } else if (data.status === 'downloading') {
-                    updateProgress(60, 'Downloading media...');
+                    updateProgress(60, '📥 Downloading media...');
                     
                 } else if (data.status === 'queued') {
-                    updateProgress(5, 'Waiting in queue...');
+                    updateProgress(10, '⏳ Waiting in queue...');
                     
                 } else {
-                    updateProgress(data.progress || 50, 'Processing...');
+                    updateProgress(data.progress || 40, '⚡ Processing...');
                 }
                 
             } catch (error) {
@@ -337,27 +744,53 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    showStatus('Logged out successfully', 'success');
+                    showStatus('✓ Logged out successfully', 'success');
+                    
+                    // Reset UI
                     document.getElementById('loginSection').style.display = 'block';
                     document.getElementById('verifySection').style.display = 'none';
                     document.getElementById('downloadSection').style.display = 'none';
                     document.getElementById('logoutSection').style.display = 'none';
-                    document.getElementById('phone').value = '';
+                    
+                    // Clear inputs
+                    document.getElementById('phone').value = '+';
                     document.getElementById('code').value = '';
                     document.getElementById('messageLink').value = '';
                     
+                    // Clear intervals
                     if (statusInterval) {
                         clearInterval(statusInterval);
                         statusInterval = null;
                     }
                     
+                    // Hide progress
                     showProgress(false);
                     currentDownloadId = null;
+                    currentPhone = '';
                 }
             } catch (error) {
                 showStatus('Logout error: ' + error.message, 'danger');
             }
         }
+
+        // Handle Enter key presses
+        document.getElementById('phone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendCode();
+            }
+        });
+
+        document.getElementById('code').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyCode();
+            }
+        });
+
+        document.getElementById('messageLink').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startDownload();
+            }
+        });
     </script>
 </body>
-  </html>
+    </html>
