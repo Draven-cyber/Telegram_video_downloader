@@ -2,19 +2,22 @@ import os
 import asyncio
 import logging
 from flask import Flask, render_template, request, send_file, jsonify, session
-from telethon import TelegramClient, events
-from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from telethon import TelegramClient
+from telethon.errors import SessionPasswordNeededError
 import hashlib
 import time
 import threading
 import queue
 import uuid
+from functools import wraps
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex()
+app.config['SESSION_TYPE'] = 'filesystem'
 
 # Your Telegram API credentials
 API_ID = '29145458'
@@ -24,20 +27,58 @@ API_HASH = '00b32d6c9f385662edfed86f047b4116'
 clients = {}
 download_tasks = {}
 download_queue = queue.Queue()
+loop_per_thread = {}
+
+def async_handler(f):
+    """Decorator to handle async functions in Flask routes"""
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        # Get or create event loop for this thread
+        thread_id = threading.get_ident()
+        if thread_id not in loop_per_thread:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop_per_thread[thread_id] = loop
+        else:
+            loop = loop_per_thread[thread_id]
+        
+        # Run the async function
+        return loop.run_until_complete(f(*args, **kwargs))
+    return wrapped
 
 class TelegramDownloader:
     def __init__(self, session_name):
         self.session_name = session_name
-        self.client = TelegramClient(f'sessions/{session_name}', API_ID, API_HASH)
-        self.is_connected = False
+        self.client = None
+        self.loop = None
+        
+    async def init_client(self):
+        """Initialize the client with proper event loop"""
+        self.loop = asyncio.get_event_loop()
+        self.client = TelegramClient(f'sessions/{self.session_name}', API_ID, API_HASH, loop=self.loop)
         
     async def connect(self):
+        """Connect to Telegram"""
+        if not self.client:
+            await self.init_client()
         await self.client.connect()
-        self.is_connected = True
         
     async def disconnect(self):
-        await self.client.disconnect()
-        self.is_connected = False
+        """Disconnect from Telegram"""
+        if self.client and self.client.is_connected():
+            await self.client.disconnect()
+            
+    async def is_authorized(self):
+        """Check if user is authorized"""
+        return await self.client.is_user_authorized()
+        
+    async def send_code(self, phone):
+        """Send verification code"""
+        return await self.client.send_code_request(phone)
+        
+    async def sign_in(self, phone, code):
+        """Sign in with code"""
+        return await self.client.sign_in(phone, code)
         
     async def get_message(self, message_link):
         """Extract message info from Telegram link"""
@@ -46,20 +87,32 @@ class TelegramDownloader:
             # Format: https://t.me/username/123 or https://t.me/c/123456789/123
             parts = message_link.split('/')
             
-            if 'c' in parts:  # Private channel
-                chat_id = int(parts[-2])
-                message_id = int(parts[-1])
+            # Remove empty strings from split
+            parts = [p for p in parts if p]
+            
+            # Find the message ID (last part)
+            message_id = int(parts[-1])
+            
+            # Determine if it's a private channel (has 'c' in the path)
+            if 'c' in parts:
+                # Private channel format: https://t.me/c/123456789/123
+                chat_id_index = parts.index('c') + 1
+                chat_id = int(parts[chat_id_index])
+                # For private channels, chat_id needs to be in format -100xxxxxxxxx
                 entity = await self.client.get_entity(int(f'-100{chat_id}'))
-            else:  # Public chat
+            else:
+                # Public chat format: https://t.me/username/123
                 chat_username = parts[-2]
-                message_id = int(parts[-1])
+                # Remove any 't.me' or 'telegram.me' prefixes
+                if chat_username in ['t.me', 'telegram.me']:
+                    chat_username = parts[-3]
                 entity = await self.client.get_entity(chat_username)
             
             # Get the message
             message = await self.client.get_messages(entity, ids=message_id)
             return message
         except Exception as e:
-            logging.error(f"Error getting message: {e}")
+            logger.error(f"Error getting message: {e}")
             return None
     
     async def download_media(self, message, download_id):
@@ -75,63 +128,73 @@ class TelegramDownloader:
                     filename = f"photo_{message.id}{ext}"
                 elif hasattr(message.media, 'document'):
                     # Try to get original filename
+                    filename = None
                     for attr in message.media.document.attributes:
                         if hasattr(attr, 'file_name'):
                             filename = attr.file_name
                             break
-                    else:
+                    
+                    if not filename:
                         # Generate filename based on MIME type
                         mime_type = message.media.document.mime_type
-                        ext = mime_type.split('/')[-1] if mime_type else 'bin'
+                        if mime_type:
+                            ext = mime_type.split('/')[-1]
+                            if ext == 'plain':
+                                ext = 'txt'
+                            elif ext == 'jpeg':
+                                ext = 'jpg'
+                        else:
+                            ext = 'bin'
                         filename = f"document_{message.id}.{ext}"
                 else:
                     return None, "Unsupported media type"
                 
                 # Download path
-                download_path = f"downloads/{download_id}_{filename}"
+                safe_filename = "".join([c for c in filename if c.isalnum() or c in ' ._-()']).rstrip()
+                download_path = f"downloads/{download_id}_{safe_filename}"
                 
                 # Download the media
                 path = await message.download_media(file=download_path)
                 
                 if path:
-                    return path, filename
+                    return path, safe_filename
                 else:
                     return None, "Download failed"
             else:
                 return None, "No media found in message"
         except Exception as e:
-            logging.error(f"Download error: {e}")
+            logger.error(f"Download error: {e}")
             return None, str(e)
 
 # Background worker for handling downloads
 def download_worker():
     """Background thread to process downloads"""
+    # Create event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
     while True:
         try:
             task = download_queue.get(timeout=1)
             if task:
-                download_id, message_link = task
-                
-                # Create new downloader instance
-                downloader = TelegramDownloader(f"session_{download_id}")
-                
-                # Run async download
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+                download_id, message_link, session_id = task
                 
                 async def process_download():
+                    downloader = None
                     try:
+                        # Create new downloader instance
+                        downloader = TelegramDownloader(session_id)
                         await downloader.connect()
                         
                         # Check if already logged in
-                        if not await downloader.client.is_user_authorized():
+                        if not await downloader.is_authorized():
                             download_tasks[download_id] = {
                                 'status': 'error',
-                                'message': 'Please log in to Telegram first'
+                                'message': 'Session expired. Please log in again.'
                             }
                             return
                         
-                        download_tasks[download_id] = {'status': 'processing', 'progress': 0}
+                        download_tasks[download_id] = {'status': 'processing', 'progress': 10}
                         
                         # Get message
                         message = await downloader.get_message(message_link)
@@ -139,7 +202,7 @@ def download_worker():
                         if not message:
                             download_tasks[download_id] = {
                                 'status': 'error',
-                                'message': 'Message not found or inaccessible'
+                                'message': 'Message not found or inaccessible. Make sure you have access to this channel/group.'
                             }
                             return
                         
@@ -155,6 +218,7 @@ def download_worker():
                                 'filename': filename,
                                 'progress': 100
                             }
+                            logger.info(f"Download completed: {filename}")
                         else:
                             download_tasks[download_id] = {
                                 'status': 'error',
@@ -162,20 +226,22 @@ def download_worker():
                             }
                             
                     except Exception as e:
+                        logger.error(f"Download error: {e}")
                         download_tasks[download_id] = {
                             'status': 'error',
                             'message': str(e)
                         }
                     finally:
-                        await downloader.disconnect()
+                        if downloader:
+                            await downloader.disconnect()
                 
+                # Run the async function
                 loop.run_until_complete(process_download())
-                loop.close()
                 
         except queue.Empty:
             pass
         except Exception as e:
-            logging.error(f"Worker error: {e}")
+            logger.error(f"Worker error: {e}")
 
 # Start background worker thread
 worker_thread = threading.Thread(target=download_worker, daemon=True)
@@ -187,10 +253,13 @@ def index():
     return render_template('index.html')
 
 @app.route('/login', methods=['POST'])
-def login():
+@async_handler
+async def login():
     """Handle Telegram login"""
     try:
-        phone = request.json.get('phone')
+        data = request.get_json()
+        phone = data.get('phone')
+        
         if not phone:
             return jsonify({'success': False, 'error': 'Phone number required'})
         
@@ -198,78 +267,77 @@ def login():
         session_id = str(uuid.uuid4())
         session['telegram_session'] = session_id
         
-        # Create client
-        client = TelegramClient(f'sessions/{session_id}', API_ID, API_HASH)
-        clients[session_id] = client
+        # Create and connect client
+        downloader = TelegramDownloader(session_id)
+        await downloader.connect()
+        clients[session_id] = downloader
         
-        # Start login process
-        async def send_code():
-            await client.connect()
-            if not await client.is_user_authorized():
-                await client.send_code_request(phone)
-                return {'success': True, 'phone_code_hash': 'sent'}
-            else:
-                return {'success': True, 'already_logged_in': True}
+        # Send code request
+        result = await downloader.send_code(phone)
         
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(send_code())
-        loop.close()
-        
-        return jsonify({'success': True, 'session_id': session_id})
+        return jsonify({
+            'success': True,
+            'message': 'Code sent successfully',
+            'phone_code_hash': getattr(result, 'phone_code_hash', '')
+        })
         
     except Exception as e:
-        logging.error(f"Login error: {e}")
+        logger.error(f"Login error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/verify', methods=['POST'])
-def verify():
+@async_handler
+async def verify():
     """Verify login code"""
     try:
-        code = request.json.get('code')
+        data = request.get_json()
+        code = data.get('code')
+        phone = data.get('phone')
         session_id = session.get('telegram_session')
         
         if not session_id or session_id not in clients:
-            return jsonify({'success': False, 'error': 'No active session'})
+            return jsonify({'success': False, 'error': 'No active session. Please start over.'})
         
-        client = clients[session_id]
+        downloader = clients[session_id]
         
-        async def verify_code():
-            try:
-                await client.sign_in(code=code)
-                return {'success': True}
-            except Exception as e:
-                return {'success': False, 'error': str(e)}
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(verify_code())
-        loop.close()
-        
-        return jsonify(result)
+        try:
+            await downloader.sign_in(phone, code)
+            return jsonify({'success': True})
+        except SessionPasswordNeededError:
+            return jsonify({'success': False, 'error': 'Two-factor authentication enabled. This version doesn\'t support 2FA yet.'})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
         
     except Exception as e:
-        logging.error(f"Verification error: {e}")
+        logger.error(f"Verification error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/download', methods=['POST'])
 def download():
     """Start download process"""
     try:
-        message_link = request.json.get('link')
+        data = request.get_json()
+        message_link = data.get('link')
         session_id = session.get('telegram_session')
         
         if not session_id:
             return jsonify({'success': False, 'error': 'Please log in first'})
         
+        if session_id not in clients:
+            return jsonify({'success': False, 'error': 'Session expired. Please log in again.'})
+        
         if not message_link:
             return jsonify({'success': False, 'error': 'Message link required'})
+        
+        # Validate link format
+        if 't.me/' not in message_link:
+            return jsonify({'success': False, 'error': 'Invalid Telegram link format'})
         
         # Generate download ID
         download_id = hashlib.md5(f"{message_link}{time.time()}".encode()).hexdigest()[:8]
         
-        # Add to queue
-        download_queue.put((download_id, message_link))
+        # Add to queue with session_id
+        download_queue.put((download_id, message_link, session_id))
         download_tasks[download_id] = {'status': 'queued', 'progress': 0}
         
         return jsonify({
@@ -279,7 +347,7 @@ def download():
         })
         
     except Exception as e:
-        logging.error(f"Download request error: {e}")
+        logger.error(f"Download request error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/status/<download_id>')
@@ -312,38 +380,76 @@ def download_file(download_id):
     if download_id in download_tasks:
         task = download_tasks[download_id]
         if task['status'] == 'completed' and os.path.exists(task['filepath']):
-            return send_file(
-                task['filepath'],
-                as_attachment=True,
-                download_name=task['filename']
-            )
+            try:
+                return send_file(
+                    task['filepath'],
+                    as_attachment=True,
+                    download_name=task['filename'],
+                    mimetype='application/octet-stream'
+                )
+            except Exception as e:
+                logger.error(f"File send error: {e}")
+                return "Error sending file", 500
     
-    return "File not found", 404
+    return "File not found or expired", 404
 
 @app.route('/logout')
-def logout():
+@async_handler
+async def logout():
     """Logout from Telegram"""
     session_id = session.get('telegram_session')
     if session_id and session_id in clients:
-        client = clients[session_id]
-        
-        async def logout_client():
-            await client.disconnect()
-            if session_id in clients:
-                del clients[session_id]
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(logout_client())
-        loop.close()
+        try:
+            downloader = clients[session_id]
+            await downloader.disconnect()
+            del clients[session_id]
+        except Exception as e:
+            logger.error(f"Logout error: {e}")
     
+    # Clear session
     session.clear()
+    
+    # Clean up old downloads (optional)
+    try:
+        # Remove files older than 1 hour
+        import time
+        current_time = time.time()
+        for filename in os.listdir('downloads'):
+            filepath = os.path.join('downloads', filename)
+            if os.path.isfile(filepath) and current_time - os.path.getctime(filepath) > 3600:
+                os.remove(filepath)
+    except Exception as e:
+        logger.error(f"Cleanup error: {e}")
+    
     return jsonify({'success': True})
+
+@app.route('/check-auth')
+@async_handler
+async def check_auth():
+    """Check if user is authenticated"""
+    session_id = session.get('telegram_session')
+    if session_id and session_id in clients:
+        try:
+            downloader = clients[session_id]
+            if await downloader.is_authorized():
+                return jsonify({'authenticated': True})
+        except:
+            pass
+    
+    return jsonify({'authenticated': False})
 
 # Create necessary directories
 os.makedirs('sessions', exist_ok=True)
 os.makedirs('downloads', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
 
+# Clean up old session files on startup
+try:
+    for filename in os.listdir('sessions'):
+        if filename.endswith('.session'):
+            os.remove(os.path.join('sessions', filename))
+except:
+    pass
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
