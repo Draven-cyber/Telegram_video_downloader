@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Media Downloader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .main-container {
+            max-width: 600px;
+            margin: 50px auto;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.95);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .card-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .card-body {
+            padding: 30px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 25px;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        .form-control {
+            border-radius: 25px;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: none;
+        }
+        .alert {
+            border-radius: 25px;
+            padding: 15px 20px;
+            margin-top: 20px;
+        }
+        .progress {
+            height: 25px;
+            border-radius: 25px;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 25px;
+            transition: width 0.3s ease;
+        }
+        .login-section {
+            margin-bottom: 30px;
+        }
+        .download-link-example {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .download-complete {
+            text-align: center;
+        }
+        .download-complete a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .download-complete a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>📥 Telegram Media Downloader</h2>
+                <p class="mb-0">Download photos and documents from Telegram messages</p>
+            </div>
+            <div class="card-body">
+                <!-- Login Section -->
+                <div id="loginSection" class="login-section">
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone Number (with country code)</label>
+                        <input type="text" class="form-control" id="phone" placeholder="e.g., +1234567890">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="sendCode()">Send Login Code</button>
+                </div>
+
+                <!-- Verification Section (hidden initially) -->
+                <div id="verifySection" style="display: none;">
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Verification Code</label>
+                        <input type="text" class="form-control" id="code" placeholder="Enter the code you received">
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="verifyCode()">Verify & Login</button>
+                </div>
+
+                <!-- Download Section (hidden until logged in) -->
+                <div id="downloadSection" style="display: none;">
+                    <div class="mb-3">
+                        <label for="messageLink" class="form-label">Telegram Message Link</label>
+                        <input type="text" class="form-control" id="messageLink" 
+                               placeholder="https://t.me/username/123 or https://t.me/c/123456789/123">
+                        <div class="download-link-example">
+                            Examples:<br>
+                            • Public channel: https://t.me/username/123<br>
+                            • Private channel: https://t.me/c/123456789/123
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="startDownload()">Download Media</button>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="statusMessage" class="alert" style="display: none;"></div>
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" style="display: none;">
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="text-center mt-2">Processing...</p>
+                </div>
+
+                <!-- Logout Button -->
+                <div id="logoutSection" style="display: none; text-align: center; margin-top: 20px;">
+                    <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDownloadId = null;
+        let statusInterval = null;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `alert alert-${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMessage').style.display = 'none';
+        }
+
+        function showProgress(show = true) {
+            document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
+        }
+
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        async function sendCode() {
+            const phone = document.getElementById('phone').value;
+            if (!phone) {
+                showStatus('Please enter your phone number', 'warning');
+                return;
+            }
+
+            try {
+                showStatus('Sending code...', 'info');
+                
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({phone: phone})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.already_logged_in) {
+                        showStatus('Already logged in!', 'success');
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('verifySection').style.display = 'none';
+                        document.getElementById('downloadSection').style.display = 'block';
+                        document.getElementById('logoutSection').style.display = 'block';
+                    } else {
+                        showStatus('Code sent! Please check your Telegram.', 'success');
+                        document.getElementById('loginSection').style.display = 'none';
+                        document.getElementById('verifySection').style.display = 'block';
+                    }
+                } else {
+                    showStatus(data.error || 'Failed to send code', 'danger');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function verifyCode() {
+            const code = document.getElementById('code').value;
+            if (!code) {
+                showStatus('Please enter the verification code', 'warning');
+                return;
+            }
+
+            try {
+                showStatus('Verifying...', 'info');
+                
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code: code})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('Login successful!', 'success');
+                    document.getElementById('verifySection').style.display = 'none';
+                    document.getElementById('downloadSection').style.display = 'block';
+                    document.getElementById('logoutSection').style.display = 'block';
+                } else {
+                    showStatus(data.error || 'Verification failed', 'danger');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function startDownload() {
+            const link = document.getElementById('messageLink').value;
+            if (!link) {
+                showStatus('Please enter a message link', 'warning');
+                return;
+            }
+
+            try {
+                showStatus('Starting download...', 'info');
+                hideStatus();
+                showProgress(true);
+                updateProgress(10, 'Initializing...');
+
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({link: link})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentDownloadId = data.download_id;
+                    showStatus('Download started!', 'success');
+                    
+                    // Start checking status
+                    if (statusInterval) clearInterval(statusInterval);
+                    statusInterval = setInterval(checkStatus, 2000);
+                } else {
+                    showProgress(false);
+                    showStatus(data.error || 'Download failed', 'danger');
+                }
+            } catch (error) {
+                showProgress(false);
+                showStatus('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function checkStatus() {
+            if (!currentDownloadId) return;
+
+            try {
+                const response = await fetch(`/status/${currentDownloadId}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed') {
+                    clearInterval(statusInterval);
+                    showProgress(false);
+                    
+                    // Show download link
+                    const downloadLink = `<a href="${data.download_url}" target="_blank">Click here to download ${data.filename}</a>`;
+                    document.getElementById('statusMessage').innerHTML = downloadLink;
+                    document.getElementById('statusMessage').className = 'alert alert-success';
+                    document.getElementById('statusMessage').style.display = 'block';
+                    
+                    currentDownloadId = null;
+                    
+                } else if (data.status === 'error') {
+                    clearInterval(statusInterval);
+                    showProgress(false);
+                    showStatus('Error: ' + data.message, 'danger');
+                    currentDownloadId = null;
+                    
+                } else if (data.status === 'processing') {
+                    updateProgress(30, 'Processing message...');
+                    
+                } else if (data.status === 'downloading') {
+                    updateProgress(60, 'Downloading media...');
+                    
+                } else if (data.status === 'queued') {
+                    updateProgress(5, 'Waiting in queue...');
+                    
+                } else {
+                    updateProgress(data.progress || 50, 'Processing...');
+                }
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch('/logout');
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('Logged out successfully', 'success');
+                    document.getElementById('loginSection').style.display = 'block';
+                    document.getElementById('verifySection').style.display = 'none';
+                    document.getElementById('downloadSection').style.display = 'none';
+                    document.getElementById('logoutSection').style.display = 'none';
+                    document.getElementById('phone').value = '';
+                    document.getElementById('code').value = '';
+                    document.getElementById('messageLink').value = '';
+                    
+                    if (statusInterval) {
+                        clearInterval(statusInterval);
+                        statusInterval = null;
+                    }
+                    
+                    showProgress(false);
+                    currentDownloadId = null;
+                }
+            } catch (error) {
+                showStatus('Logout error: ' + error.message, 'danger');
+            }
+        }
+    </script>
+</body>
+  </html>
